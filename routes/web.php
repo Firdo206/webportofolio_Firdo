@@ -11,7 +11,11 @@ use Illuminate\Support\Facades\Route;
 Route::get('/', [LandingController::class, 'index'])->name('landing');
 
 Route::get('/dashboard', function () {
-    return view('dashboard');
+    return view('dashboard', [
+        'skillCount' => \App\Models\Skill::count(),
+        'experienceCount' => \App\Models\Experience::count(),
+        'projectCount' => \App\Models\Project::count(),
+    ]);
 })->middleware(['auth', 'verified'])->name('dashboard');
 
 Route::middleware('auth')->group(function () {

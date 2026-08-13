@@ -7,22 +7,49 @@
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/devicons/devicon@latest/devicon.min.css">
     <style>
-        .skill-carousel-wrapper {
-            width: 100%;
-            overflow: hidden;
-            padding: 40px 0;
-            -webkit-mask-image: linear-gradient(to right, transparent, black 10%, black 90%, transparent);
-            mask-image: linear-gradient(to right, transparent, black 10%, black 90%, transparent);
+        .fade-section {
+            opacity: 0;
+            transform: translateY(40px);
+            transition: opacity 0.8s ease, transform 0.8s ease;
         }
-        .skill-carousel {
-            will-change: transform;
+        .fade-section.is-visible {
+            opacity: 1;
+            transform: translateY(0);
         }
-        .skill-item {
-            will-change: transform, opacity;
+        .hero-fade {
+            opacity: 0;
+            transform: translateY(20px);
+            animation: heroIn 0.9s ease forwards;
         }
-        .skill-item.is-glow {
-            border-color: rgba(168, 85, 247, 0.6);
-            box-shadow: 0 0 30px rgba(139, 92, 246, 0.5);
+        .hero-fade.delay-1 { animation-delay: 0.15s; }
+        .hero-fade.delay-2 { animation-delay: 0.3s; }
+        .hero-fade.delay-3 { animation-delay: 0.45s; }
+        @keyframes heroIn {
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .skill-stage {
+            perspective: 800px;
+        }
+        .skill-slide {
+            opacity: 0;
+            transform: scale(0.7) translateY(15px);
+            transition: opacity 0.5s ease, transform 0.5s ease;
+            pointer-events: none;
+        }
+        .skill-slide.is-active {
+            opacity: 1;
+            transform: scale(1) translateY(0);
+            pointer-events: auto;
+        }
+        .skill-slide.is-active .skill-icon-box {
+            box-shadow: 0 0 30px rgba(139, 92, 246, 0.4);
+            border-color: rgba(168, 85, 247, 0.5);
+        }
+        .skill-dot.is-active {
+            background-color: rgba(168, 85, 247, 0.9);
+            width: 24px;
+            border-radius: 9999px;
         }
     </style>
 </head>
@@ -50,18 +77,18 @@
         <div class="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(139,92,246,0.25),transparent_50%)]"></div>
         <div class="max-w-6xl mx-auto px-6 grid md:grid-cols-2 gap-10 items-center relative z-10">
             <div>
-                <span class="inline-block px-3 py-1 text-xs rounded-full bg-white/10 border border-white/10 mb-4">
-                    Digital Creative Developer
+                <span class="hero-fade inline-block px-3 py-1 text-xs rounded-full bg-white/10 border border-white/10 mb-4">
+                    Web and Mobile Developer
                 </span>
-                <h1 class="text-4xl md:text-5xl font-bold leading-tight mb-4">
+                <h1 class="hero-fade delay-1 text-4xl md:text-5xl font-bold leading-tight mb-4">
                     Halo, saya <br>
                     <span class="bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">
                         {{ $profile->name ?? 'Nama Kamu' }}
                     </span>
                 </h1>
-                <p class="text-gray-400 mb-6">{{ $profile->tagline ?? '' }}</p>
+                <p class="hero-fade delay-2 text-gray-400 mb-6">{{ $profile->tagline ?? '' }}</p>
 
-                <div class="flex gap-4 mb-6">
+                <div class="hero-fade delay-3 flex gap-4 mb-6">
                     <a href="#projects" class="px-5 py-2.5 rounded-full bg-purple-600 hover:bg-purple-700 transition text-sm font-medium">
                         View Projects →
                     </a>
@@ -71,7 +98,7 @@
                 </div>
 
                 {{-- SOCIAL ICONS --}}
-                <div class="flex gap-4">
+                <div class="hero-fade delay-3 flex gap-4">
                     @if($profile->github_url)
                     <a href="{{ $profile->github_url }}" target="_blank" class="w-10 h-10 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 transition">
                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-5 h-5">
@@ -97,7 +124,7 @@
                 </div>
             </div>
 
-            <div class="flex justify-center">
+            <div class="hero-fade delay-2 flex justify-center">
                 <div class="w-64 h-80 rounded-3xl bg-gradient-to-br from-purple-500/30 to-pink-500/30 border border-white/10 flex items-center justify-center overflow-hidden">
                     @if($profile->photo)
                         <img src="{{ asset('storage/'.$profile->photo) }}" alt="{{ $profile->name }}" class="w-full h-full object-cover">
@@ -110,7 +137,7 @@
     </section>
 
     {{-- ABOUT --}}
-    <section id="about" class="py-24 border-t border-white/5">
+    <section id="about" class="fade-section py-24 border-t border-white/5">
         <div class="max-w-3xl mx-auto px-6 text-center">
             <h2 class="text-3xl font-bold mb-6">About Me</h2>
             <p class="text-gray-400 leading-relaxed">
@@ -120,97 +147,133 @@
     </section>
 
     {{-- SKILLS --}}
-    <section id="skills" class="py-24 border-t border-white/5 bg-white/[0.02] overflow-hidden">
+    <section id="skills" class="fade-section py-24 border-t border-white/5 bg-white/[0.02]">
         <div class="max-w-4xl mx-auto px-6">
             <h2 class="text-3xl font-bold text-center mb-16">My Skills</h2>
-        </div>
 
-        <div class="skill-carousel-wrapper relative">
-            <div class="skill-carousel flex items-center gap-6" id="skillCarousel">
-                @forelse($skills->flatten() as $skill)
-                    @php
-                        $name = strtolower($skill->name);
-                        $devicon = match($name) {
-                            'laravel' => 'devicon-laravel-plain colored',
-                            'php' => 'devicon-php-plain colored',
-                            'mysql' => 'devicon-mysql-plain colored',
-                            'flutter' => 'devicon-flutter-plain colored',
-                            'javascript' => 'devicon-javascript-plain colored',
-                            'tailwind css' => 'devicon-tailwindcss-plain colored',
-                            'git & github', 'github', 'git' => 'devicon-github-original',
-                            'figma' => 'devicon-figma-plain colored',
-                            'react' => 'devicon-react-original colored',
-                            'vue', 'vue.js' => 'devicon-vuejs-plain colored',
-                            'html', 'html5' => 'devicon-html5-plain colored',
-                            'css', 'css3' => 'devicon-css3-plain colored',
-                            'python' => 'devicon-python-plain colored',
-                            'nodejs', 'node.js' => 'devicon-nodejs-plain colored',
-                            'firebase' => 'devicon-firebase-plain colored',
-                            'bootstrap' => 'devicon-bootstrap-plain colored',
-                            default => null,
-                        };
-                        $simpleiconSlug = match($name) {
-                            'canva' => 'canva',
-                            'whatsapp' => 'whatsapp',
-                            'instagram' => 'instagram',
-                            'notion' => 'notion',
-                            'postman' => 'postman',
-                            'vercel' => 'vercel',
-                            'netlify' => 'netlify',
-                            default => null,
-                        };
-                    @endphp
-                    <div class="skill-item group relative flex-shrink-0 w-28 h-28 flex items-center justify-center rounded-3xl bg-white/5 border border-white/10"
-                         data-name="{{ $skill->name }}">
+            @php
+                $flatSkills = $skills->flatten();
+            @endphp
 
-                        <span class="absolute -top-9 left-1/2 -translate-x-1/2 whitespace-nowrap px-3 py-1 rounded-lg bg-black/90 border border-white/10 text-xs text-white opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none">
-                            {{ $skill->name }}
-                        </span>
+            @if($flatSkills->isEmpty())
+                <p class="text-center text-gray-500">Belum ada skill ditambahkan.</p>
+            @else
+                <div class="skill-stage relative h-48 flex items-center justify-center">
+                    @foreach($flatSkills as $index => $skill)
+                        @php
+                            $name = strtolower($skill->name);
+                            $devicon = match($name) {
+                                'laravel' => 'devicon-laravel-plain colored',
+                                'php' => 'devicon-php-plain colored',
+                                'mysql' => 'devicon-mysql-plain colored',
+                                'flutter' => 'devicon-flutter-plain colored',
+                                'javascript' => 'devicon-javascript-plain colored',
+                                'tailwind css' => 'devicon-tailwindcss-plain colored',
+                                'git & github', 'github', 'git' => 'devicon-github-original',
+                                'figma' => 'devicon-figma-plain colored',
+                                'react' => 'devicon-react-original colored',
+                                'vue', 'vue.js' => 'devicon-vuejs-plain colored',
+                                'html', 'html5' => 'devicon-html5-plain colored',
+                                'css', 'css3' => 'devicon-css3-plain colored',
+                                'python' => 'devicon-python-plain colored',
+                                'nodejs', 'node.js' => 'devicon-nodejs-plain colored',
+                                'firebase' => 'devicon-firebase-plain colored',
+                                'bootstrap' => 'devicon-bootstrap-plain colored',
+                                default => null,
+                            };
+                            $simpleiconSlug = match($name) {
+                                'canva' => 'canva',
+                                'whatsapp' => 'whatsapp',
+                                'instagram' => 'instagram',
+                                'notion' => 'notion',
+                                'postman' => 'postman',
+                                'vercel' => 'vercel',
+                                'netlify' => 'netlify',
+                                default => null,
+                            };
+                        @endphp
+                        <div class="skill-slide absolute flex flex-col items-center gap-4 {{ $index === 0 ? 'is-active' : '' }}">
+                            <div class="skill-icon-box w-28 h-28 flex items-center justify-center rounded-3xl bg-white/5 border border-white/10 transition-all duration-500">
+                                @if($devicon)
+                                    <i class="{{ $devicon }} text-6xl"></i>
+                                @elseif($simpleiconSlug)
+                                    <img src="https://cdn.jsdelivr.net/npm/simple-icons@latest/icons/{{ $simpleiconSlug }}.svg" alt="{{ $skill->name }}" class="w-12 h-12" style="filter: invert(1);">
+                                @else
+                                    <span class="text-2xl font-bold text-purple-300">{{ substr($skill->name, 0, 2) }}</span>
+                                @endif
+                            </div>
+                            <span class="text-sm text-gray-300 font-medium">{{ $skill->name }}</span>
+                        </div>
+                    @endforeach
+                </div>
 
-                        @if($devicon)
-                            <i class="{{ $devicon }} text-6xl pointer-events-none"></i>
-                        @elseif($simpleiconSlug)
-                            <img src="https://cdn.jsdelivr.net/npm/simple-icons@latest/icons/{{ $simpleiconSlug }}.svg" alt="{{ $skill->name }}" class="w-12 h-12 pointer-events-none" style="filter: invert(1);">
-                        @else
-                            <span class="text-2xl font-bold text-purple-300 pointer-events-none">{{ substr($skill->name, 0, 2) }}</span>
-                        @endif
-                    </div>
-                @empty
-                    <p class="text-center text-gray-500 w-full">Belum ada skill ditambahkan.</p>
-                @endforelse
-            </div>
+                {{-- dots indicator --}}
+                <div class="flex justify-center gap-2 mt-8" id="skillDots">
+                    @foreach($flatSkills as $index => $skill)
+                        <span class="skill-dot w-2 h-2 rounded-full bg-white/20 transition-all duration-300 {{ $index === 0 ? 'is-active' : '' }}"></span>
+                    @endforeach
+                </div>
+            @endif
         </div>
     </section>
 
     {{-- EXPERIENCE --}}
-    <section id="experience" class="py-24 border-t border-white/5">
+    <section id="experience" class="fade-section py-24 border-t border-white/5">
         <div class="max-w-3xl mx-auto px-6">
-            <h2 class="text-3xl font-bold text-center mb-12">Experience</h2>
-            <div class="space-y-6">
-                @forelse($experiences as $exp)
-                    <div class="p-6 rounded-2xl bg-white/5 border border-white/10">
-                        <div class="flex justify-between items-start flex-wrap gap-2 mb-2">
-                            <h3 class="font-semibold text-lg">{{ $exp->title }}</h3>
-                            <span class="text-xs px-3 py-1 rounded-full bg-purple-600/20 text-purple-300 capitalize">
-                                {{ $exp->type }}
-                            </span>
+            <h2 class="text-3xl font-bold text-center mb-8">Experience</h2>
+
+            @php
+                $expTypes = $experiences->pluck('type')->unique();
+            @endphp
+
+            @if($experiences->isNotEmpty())
+                {{-- Filter tabs --}}
+                <div class="flex justify-center gap-2 mb-10 flex-wrap" id="expFilters">
+                    <button class="exp-filter-btn is-active px-4 py-1.5 rounded-full text-xs font-medium border border-white/10 bg-white/10 transition" data-filter="all">
+                        Semua
+                    </button>
+                    @foreach($expTypes as $type)
+                        <button class="exp-filter-btn px-4 py-1.5 rounded-full text-xs font-medium border border-white/10 hover:bg-white/5 transition capitalize" data-filter="{{ $type }}">
+                            {{ $type }}
+                        </button>
+                    @endforeach
+                </div>
+
+                <div class="space-y-6" id="expList">
+                    @foreach($experiences as $index => $exp)
+                        <div class="exp-item p-6 rounded-2xl bg-white/5 border border-white/10 {{ $index >= 4 ? 'hidden' : '' }}"
+                             data-type="{{ $exp->type }}">
+                            <div class="flex justify-between items-start flex-wrap gap-2 mb-2">
+                                <h3 class="font-semibold text-lg">{{ $exp->title }}</h3>
+                                <span class="text-xs px-3 py-1 rounded-full bg-purple-600/20 text-purple-300 capitalize">
+                                    {{ $exp->type }}
+                                </span>
+                            </div>
+                            <p class="text-sm text-gray-400 mb-2">
+                                {{ $exp->place }} ·
+                                {{ $exp->start_date?->format('M Y') }} -
+                                {{ $exp->end_date ? $exp->end_date->format('M Y') : 'Sekarang' }}
+                            </p>
+                            <p class="text-gray-400 text-sm">{{ $exp->description }}</p>
                         </div>
-                        <p class="text-sm text-gray-400 mb-2">
-                            {{ $exp->place }} ·
-                            {{ $exp->start_date?->format('M Y') }} -
-                            {{ $exp->end_date ? $exp->end_date->format('M Y') : 'Sekarang' }}
-                        </p>
-                        <p class="text-gray-400 text-sm">{{ $exp->description }}</p>
+                    @endforeach
+                </div>
+
+                @if($experiences->count() > 4)
+                    <div class="text-center mt-8">
+                        <button id="expToggleBtn" class="px-5 py-2 rounded-full border border-white/20 hover:bg-white/10 transition text-sm font-medium">
+                            Lihat Semua ({{ $experiences->count() }})
+                        </button>
                     </div>
-                @empty
-                    <p class="text-center text-gray-500">Belum ada pengalaman ditambahkan.</p>
-                @endforelse
-            </div>
+                @endif
+            @else
+                <p class="text-center text-gray-500">Belum ada pengalaman ditambahkan.</p>
+            @endif
         </div>
     </section>
 
     {{-- PROJECTS --}}
-    <section id="projects" class="py-24 border-t border-white/5 bg-white/[0.02]">
+    <section id="projects" class="fade-section py-24 border-t border-white/5 bg-white/[0.02]">
         <div class="max-w-5xl mx-auto px-6">
             <h2 class="text-3xl font-bold text-center mb-12">Projects</h2>
             <div class="grid md:grid-cols-2 gap-6">
@@ -245,7 +308,7 @@
     </section>
 
     {{-- CONTACT --}}
-    <section id="contact" class="py-24 border-t border-white/5">
+    <section id="contact" class="fade-section py-24 border-t border-white/5">
         <div class="max-w-2xl mx-auto px-6 text-center">
             <h2 class="text-3xl font-bold mb-4">Contact Me</h2>
             <p class="text-gray-400 mb-8">Tertarik kolaborasi atau punya pertanyaan? Hubungi saya lewat salah satu kanal berikut.</p>
@@ -270,57 +333,76 @@
     </footer>
 
     <script>
+    // Animasi fade-in tiap section pas discroll ke area itu
     document.addEventListener('DOMContentLoaded', function () {
-        const track = document.getElementById('skillCarousel');
-        if (!track) return;
-
-        const items = Array.from(track.children).filter(el => el.classList.contains('skill-item'));
-        if (items.length === 0) return;
-
-        // duplikat item biar looping mulus (infinite scroll ilusi)
-        items.forEach(item => track.appendChild(item.cloneNode(true)));
-        const allItems = Array.from(track.children).filter(el => el.classList.contains('skill-item'));
-
-        let position = 0;
-        const speed = 0.4; // px per frame, atur kecepatan geser di sini
-        const itemWidth = 112 + 24; // width item (w-28=112px) + gap-6 (24px)
-
-        // seberapa jauh (dalam piksel) efek scale/opacity mulai meluruh dari tengah
-        const falloffRange = itemWidth * 2.2;
-
-        function animate() {
-            position -= speed;
-
-            // reset ke awal biar infinite loop mulus
-            if (Math.abs(position) >= itemWidth * items.length) {
-                position = 0;
-            }
-
-            track.style.transform = `translateX(${position}px)`;
-
-            const screenCenter = window.innerWidth / 2;
-
-            allItems.forEach(item => {
-                const rect = item.getBoundingClientRect();
-                const itemCenter = rect.left + rect.width / 2;
-                const dist = Math.abs(screenCenter - itemCenter);
-
-                // t = 0 pas di tengah, t = 1 saat udah jauh -> transisi jadi kontinu, bukan lompat antar state
-                const t = Math.min(dist / falloffRange, 1);
-
-                const scale = 1.25 - t * 0.5;   // 1.25 (tengah) -> 0.75 (jauh)
-                const opacity = 1 - t * 0.6;    // 1 (tengah) -> 0.4 (jauh)
-
-                item.style.transform = `scale(${scale})`;
-                item.style.opacity = opacity;
-
-                item.classList.toggle('is-glow', t < 0.12);
+        const sections = document.querySelectorAll('.fade-section');
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('is-visible');
+                    observer.unobserve(entry.target);
+                }
             });
+        }, { threshold: 0.15 });
 
-            requestAnimationFrame(animate);
+        sections.forEach(section => observer.observe(section));
+    });
+
+    // Skills slideshow satu-satu
+    document.addEventListener('DOMContentLoaded', function () {
+        const slides = document.querySelectorAll('.skill-slide');
+        const dots = document.querySelectorAll('.skill-dot');
+        if (slides.length === 0) return;
+
+        let current = 0;
+        const interval = 2200; // jeda antar skill (ms) — atur di sini
+
+        function showSlide(index) {
+            slides.forEach(s => s.classList.remove('is-active'));
+            dots.forEach(d => d.classList.remove('is-active'));
+            slides[index].classList.add('is-active');
+            if (dots[index]) dots[index].classList.add('is-active');
         }
 
-        requestAnimationFrame(animate);
+        setInterval(() => {
+            current = (current + 1) % slides.length;
+            showSlide(current);
+        }, interval);
+    });
+
+    // Experience: filter tab + limit/lihat semua
+    document.addEventListener('DOMContentLoaded', function () {
+        const filterBtns = document.querySelectorAll('.exp-filter-btn');
+        const items = document.querySelectorAll('.exp-item');
+        const toggleBtn = document.getElementById('expToggleBtn');
+        const totalCount = items.length;
+        let showAll = false;
+        let activeFilter = 'all';
+
+        function applyFilters() {
+            items.forEach((item, index) => {
+                const matchesFilter = activeFilter === 'all' || item.dataset.type === activeFilter;
+                const withinLimit = showAll || index < 4;
+                item.classList.toggle('hidden', !(matchesFilter && withinLimit));
+            });
+        }
+
+        filterBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                filterBtns.forEach(b => b.classList.remove('is-active', 'bg-white/10'));
+                btn.classList.add('is-active', 'bg-white/10');
+                activeFilter = btn.dataset.filter;
+                applyFilters();
+            });
+        });
+
+        if (toggleBtn) {
+            toggleBtn.addEventListener('click', () => {
+                showAll = !showAll;
+                toggleBtn.textContent = showAll ? 'Tampilkan Lebih Sedikit' : `Lihat Semua (${totalCount})`;
+                applyFilters();
+            });
+        }
     });
     </script>
 
