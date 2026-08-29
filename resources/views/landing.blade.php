@@ -275,35 +275,73 @@
     {{-- PROJECTS --}}
     <section id="projects" class="fade-section py-24 border-t border-white/5 bg-white/[0.02]">
         <div class="max-w-5xl mx-auto px-6">
-            <h2 class="text-3xl font-bold text-center mb-12">Projects</h2>
-            <div class="grid md:grid-cols-2 gap-6">
-                @forelse($projects as $project)
-                    <div class="rounded-2xl overflow-hidden bg-white/5 border border-white/10 hover:border-purple-400/40 transition">
-                        <div class="h-40 bg-gradient-to-br from-purple-500/20 to-pink-500/20 flex items-center justify-center">
-                            @if($project->image)
-                                <img src="{{ asset('storage/'.$project->image) }}" class="w-full h-full object-cover">
-                            @else
-                                <span class="text-gray-500 text-xs">Belum ada gambar</span>
-                            @endif
-                        </div>
-                        <div class="p-5">
-                            <h3 class="font-semibold text-lg mb-2">{{ $project->title }}</h3>
-                            <p class="text-sm text-gray-400 mb-3">{{ $project->description }}</p>
-                            <p class="text-xs text-purple-300 mb-4">{{ $project->tech_stack }}</p>
-                            <div class="flex gap-3 text-sm">
-                                @if($project->demo_url)
-                                    <a href="{{ $project->demo_url }}" target="_blank" class="text-purple-400 hover:underline">Demo →</a>
-                                @endif
-                                @if($project->github_url)
-                                    <a href="{{ $project->github_url }}" target="_blank" class="text-gray-400 hover:underline">GitHub →</a>
+            <h2 class="text-3xl font-bold text-center mb-8">Projects</h2>
+
+            @if($projects->isNotEmpty())
+                @php
+                    // ambil semua tech stack unik dari semua project, buat jadi tag filter
+                    $allTechs = $projects->flatMap(function ($p) {
+                        return collect(explode(',', $p->tech_stack))->map(fn($t) => trim($t))->filter();
+                    })->unique()->values();
+                @endphp
+
+                @if($allTechs->isNotEmpty())
+                    <div class="flex justify-center gap-2 mb-10 flex-wrap" id="projectFilters">
+                        <button class="proj-filter-btn is-active px-4 py-1.5 rounded-full text-xs font-medium border border-white/10 bg-white/10 transition" data-filter="all">
+                            Semua
+                        </button>
+                        @foreach($allTechs as $tech)
+                            <button class="proj-filter-btn px-4 py-1.5 rounded-full text-xs font-medium border border-white/10 hover:bg-white/5 transition" data-filter="{{ Str::slug($tech) }}">
+                                {{ $tech }}
+                            </button>
+                        @endforeach
+                    </div>
+                @endif
+
+                <div class="grid md:grid-cols-2 gap-6" id="projectList">
+                    @foreach($projects as $index => $project)
+                        @php
+                            $techSlugs = collect(explode(',', $project->tech_stack))
+                                ->map(fn($t) => Str::slug(trim($t)))
+                                ->filter()
+                                ->implode(' ');
+                        @endphp
+                        <div class="project-item rounded-2xl overflow-hidden bg-white/5 border border-white/10 hover:border-purple-400/40 transition {{ $index >= 4 ? 'hidden' : '' }}"
+                             data-techs="{{ $techSlugs }}">
+                            <div class="h-40 bg-gradient-to-br from-purple-500/20 to-pink-500/20 flex items-center justify-center">
+                                @if($project->image)
+                                    <img src="{{ asset('storage/'.$project->image) }}" class="w-full h-full object-cover">
+                                @else
+                                    <span class="text-gray-500 text-xs">Belum ada gambar</span>
                                 @endif
                             </div>
+                            <div class="p-5">
+                                <h3 class="font-semibold text-lg mb-2">{{ $project->title }}</h3>
+                                <p class="text-sm text-gray-400 mb-3">{{ $project->description }}</p>
+                                <p class="text-xs text-purple-300 mb-4">{{ $project->tech_stack }}</p>
+                                <div class="flex gap-3 text-sm">
+                                    @if($project->demo_url)
+                                        <a href="{{ $project->demo_url }}" target="_blank" class="text-purple-400 hover:underline">Demo →</a>
+                                    @endif
+                                    @if($project->github_url)
+                                        <a href="{{ $project->github_url }}" target="_blank" class="text-gray-400 hover:underline">GitHub →</a>
+                                    @endif
+                                </div>
+                            </div>
                         </div>
+                    @endforeach
+                </div>
+
+                @if($projects->count() > 4)
+                    <div class="text-center mt-8">
+                        <button id="projectToggleBtn" class="px-5 py-2 rounded-full border border-white/20 hover:bg-white/10 transition text-sm font-medium">
+                            Lihat Semua ({{ $projects->count() }})
+                        </button>
                     </div>
-                @empty
-                    <p class="text-center text-gray-500 col-span-2">Belum ada project ditambahkan.</p>
-                @endforelse
-            </div>
+                @endif
+            @else
+                <p class="text-center text-gray-500">Belum ada project ditambahkan.</p>
+            @endif
         </div>
     </section>
 
@@ -384,6 +422,52 @@
                 const matchesFilter = activeFilter === 'all' || item.dataset.type === activeFilter;
                 const withinLimit = showAll || index < 4;
                 item.classList.toggle('hidden', !(matchesFilter && withinLimit));
+            });
+        }
+
+        filterBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                filterBtns.forEach(b => b.classList.remove('is-active', 'bg-white/10'));
+                btn.classList.add('is-active', 'bg-white/10');
+                activeFilter = btn.dataset.filter;
+                applyFilters();
+            });
+        });
+
+        if (toggleBtn) {
+            toggleBtn.addEventListener('click', () => {
+                showAll = !showAll;
+                toggleBtn.textContent = showAll ? 'Tampilkan Lebih Sedikit' : `Lihat Semua (${totalCount})`;
+                applyFilters();
+            });
+        }
+    });
+
+    // Projects: filter tag + limit/lihat semua
+    document.addEventListener('DOMContentLoaded', function () {
+        const filterBtns = document.querySelectorAll('.proj-filter-btn');
+        const items = document.querySelectorAll('.project-item');
+        const toggleBtn = document.getElementById('projectToggleBtn');
+        const totalCount = items.length;
+        let showAll = false;
+        let activeFilter = 'all';
+
+        function applyFilters() {
+            let visibleIndex = 0;
+            items.forEach((item) => {
+                const techs = item.dataset.techs.split(' ');
+                const matchesFilter = activeFilter === 'all' || techs.includes(activeFilter);
+                const withinLimit = showAll || visibleIndex < 4;
+
+                if (matchesFilter && withinLimit) {
+                    item.classList.remove('hidden');
+                    visibleIndex++;
+                } else if (matchesFilter) {
+                    item.classList.add('hidden');
+                    visibleIndex++;
+                } else {
+                    item.classList.add('hidden');
+                }
             });
         }
 
